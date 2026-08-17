@@ -8,6 +8,6 @@ class CourtDiaryApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        DailyCaseSyncScheduler.schedule(this)
+        if (AppPreferences.autoSync(this)) DailyCaseSyncScheduler.schedule(this)
     }
 }
