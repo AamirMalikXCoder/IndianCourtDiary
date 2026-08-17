@@ -11,6 +11,13 @@ object AppPreferences {
     fun reminderHour(context: Context): Int =
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getInt("reminder_hour", 9)
 
+    fun autoSync(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean("auto_sync", false)
+
+    fun setAutoSync(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean("auto_sync", enabled).apply()
+    }
+
     fun language(context: Context): String =
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString("language", "English") ?: "English"
 
