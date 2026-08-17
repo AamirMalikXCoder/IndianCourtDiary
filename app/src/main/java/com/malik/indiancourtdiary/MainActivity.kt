@@ -161,7 +161,7 @@ fun androidx.compose.foundation.lazy.LazyListScope.hearingSection(title:String,l
   item{PremiumPanel{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FilterChip(language=="English",{language="English";saved=false},label={Text("English")});FilterChip(language=="Hindi",{language="Hindi";saved=false},label={Text("हिन्दी")})};Text(if(language=="Hindi")"अगली बार ऐप खोलने पर लागू होगा।" else "Applies when the app is opened again.",style=MaterialTheme.typography.bodySmall,color=CourtMuted)}}
   item{Button({vm.saveSettings(days,hour,language){saved=true}},Modifier.fillMaxWidth()){Text(if(saved)"Saved" else "Save settings")}}
   item{Text("Legal & support",style=MaterialTheme.typography.titleLarge)}
-  items(listOf("Privacy Policy","Terms of Use","About","Contact")){page->ElevatedCard(Modifier.fillMaxWidth().clickable{legalPage=page}){Row(Modifier.fillMaxWidth().padding(18.dp),verticalAlignment=Alignment.CenterVertically){Icon(when(page){"Privacy Policy"->Icons.Outlined.PrivacyTip;"Terms of Use"->Icons.Outlined.Description;"About"->Icons.Outlined.Info;else->Icons.Outlined.Email},null,tint=CourtGold);Spacer(Modifier.width(14.dp));Text(page,Modifier.weight(1f));Icon(Icons.Outlined.ChevronRight,null,color=CourtMuted)}}}
+  items(listOf("Privacy Policy","Terms of Use","About","Contact")){page->ElevatedCard(Modifier.fillMaxWidth().clickable{legalPage=page}){Row(Modifier.fillMaxWidth().padding(18.dp),verticalAlignment=Alignment.CenterVertically){Icon(when(page){"Privacy Policy"->Icons.Outlined.PrivacyTip;"Terms of Use"->Icons.Outlined.Description;"About"->Icons.Outlined.Info;else->Icons.Outlined.Email},null,tint=CourtGold);Spacer(Modifier.width(14.dp));Text(page,Modifier.weight(1f));Icon(Icons.Outlined.ChevronRight,null,tint=CourtMuted)}}}
  }
 }
 
