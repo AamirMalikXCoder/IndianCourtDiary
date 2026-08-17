@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.ActivityCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.gson.Gson
@@ -31,6 +32,7 @@ import java.time.format.DateTimeFormatter
 
 class MainActivity:ComponentActivity(){
  override fun onCreate(b:Bundle?){
+  installSplashScreen()
   super.onCreate(b)
   if(Build.VERSION.SDK_INT>=33)ActivityCompat.requestPermissions(this,arrayOf(Manifest.permission.POST_NOTIFICATIONS),1001)
   setContent{CourtPremiumTheme{Diary()}}
