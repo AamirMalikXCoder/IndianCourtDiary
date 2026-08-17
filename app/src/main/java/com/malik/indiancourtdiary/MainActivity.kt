@@ -40,7 +40,7 @@ class MainActivity:ComponentActivity(){
  var selected by remember{mutableStateOf<CourtCase?>(null)}
  var tab by remember{mutableIntStateOf(0)}
 
- if(selected!=null){CaseDetail(selected!!){selected=null};return}
+ if(selected!=null){CaseDetail(selected!!,vm){selected=null};return}
 
  Scaffold(
   topBar={TopAppBar(title={Column{Text(if(tab==0)"Court Diary" else "Hearing Calendar");Text(if(tab==0)"Your cases, organised" else "Today, tomorrow & upcoming",style=MaterialTheme.typography.labelSmall)}})},
@@ -57,10 +57,15 @@ class MainActivity:ComponentActivity(){
 }
 
 @Composable fun CasesList(cases:List<CourtCase>,open:(CourtCase)->Unit,delete:(String)->Unit,modifier:Modifier){
- if(cases.isEmpty())Box(modifier.fillMaxSize(),contentAlignment=Alignment.Center){Text("No cases added\nTap + and enter the CNR number.")}
- else LazyColumn(modifier,contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-  item{Text("My Cases",style=MaterialTheme.typography.headlineSmall)}
-  items(cases,key={it.cnr}){c->CaseCard(c,open,delete)}
+ var query by remember{mutableStateOf("")}
+ val filtered=remember(cases,query){if(query.isBlank())cases else cases.filter{it.cnr.contains(query,true)||it.caseTitle.contains(query,true)||it.courtName.contains(query,true)||it.clientName.contains(query,true)}}
+ Column(modifier){
+  OutlinedTextField(query,{query=it},Modifier.fillMaxWidth().padding(16.dp),label={Text("Search cases")},leadingIcon={Icon(Icons.Outlined.Search,null)},singleLine=true)
+  if(filtered.isEmpty())Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Text(if(cases.isEmpty())"No cases added\nTap + and enter the CNR number." else "No matching cases")}
+  else LazyColumn(contentPadding=PaddingValues(horizontal=16.dp,vertical=4.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+   item{Text("My Cases",style=MaterialTheme.typography.headlineSmall)}
+   items(filtered,key={it.cnr}){item->CaseCard(item,open,delete)}
+  }
  }
 }
 
@@ -98,13 +103,22 @@ fun androidx.compose.foundation.lazy.LazyListScope.hearingSection(title:String,l
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun CaseDetail(c:CourtCase,back:()->Unit){
+@Composable fun CaseDetail(c:CourtCase,vm:CourtDiaryViewModel,back:()->Unit){
  BackHandler(onBack=back)
  val type=object:TypeToken<List<HearingResponse>>(){}.type
  val history=remember(c.hearingHistoryJson){runCatching{Gson().fromJson<List<HearingResponse>>(c.hearingHistoryJson,type)}.getOrDefault(emptyList())}
+ var name by remember{mutableStateOf(c.clientName)}
+ var phone by remember{mutableStateOf(c.clientPhone)}
+ var notes by remember{mutableStateOf(c.notes)}
+ var saved by remember{mutableStateOf(false)}
  Scaffold(topBar={TopAppBar(title={Text("Case Details")},navigationIcon={IconButton(back){Icon(Icons.Outlined.ArrowBack,"Back")}})}){p->
   LazyColumn(Modifier.padding(p),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
    item{ElevatedCard{Column(Modifier.fillMaxWidth().padding(16.dp)){Text(c.caseTitle,style=MaterialTheme.typography.titleLarge);Text(c.cnr,color=MaterialTheme.colorScheme.primary);Text(c.courtName);Text("Stage: "+c.stage);Text(c.nextHearingDate?.let{"Next hearing: $it"}?:"Next hearing unavailable")}}}
+   item{Text("Client & Private Notes",style=MaterialTheme.typography.titleLarge)}
+   item{OutlinedTextField(name,{name=it;saved=false},Modifier.fillMaxWidth(),label={Text("Client name")},singleLine=true)}
+   item{OutlinedTextField(phone,{phone=it;saved=false},Modifier.fillMaxWidth(),label={Text("Mobile number")},singleLine=true)}
+   item{OutlinedTextField(notes,{notes=it;saved=false},Modifier.fillMaxWidth(),label={Text("Private notes")},minLines=3)}
+   item{Button({vm.saveMetadata(c.cnr,name,phone,notes){saved=true}},Modifier.fillMaxWidth()){Text(if(saved)"Saved" else "Save details")}}
    item{Text("Hearing History",style=MaterialTheme.typography.titleLarge)}
    if(history.isEmpty())item{Text("No hearing history available yet.")}
    else items(history){h->OutlinedCard{Column(Modifier.fillMaxWidth().padding(14.dp)){Text(h.date?:"Date unavailable");h.purpose?.let{Text("Purpose: $it")};h.judge?.let{Text("Judge: $it")};h.status?.let{Text("Status: $it")}}}}
