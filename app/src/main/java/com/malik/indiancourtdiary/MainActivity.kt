@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -48,15 +49,19 @@ class MainActivity:ComponentActivity(){
  if(selected!=null){CaseDetail(selected!!,vm){selected=null};return}
 
  Scaffold(
-  topBar={TopAppBar(title={Column{Text(if(tab==0)"Court Diary" else "Hearing Calendar");Text(if(tab==0)"Your cases, organised" else "Today, tomorrow & upcoming",style=MaterialTheme.typography.labelSmall)}})},
+  topBar={TopAppBar(title={Column{Text(when(tab){0->"Court Diary";1->"Hearing Calendar";else->"Settings"});Text(when(tab){0->"Your cases, organised";1->"Today, tomorrow & upcoming";else->"Reminders & language"},style=MaterialTheme.typography.labelSmall)}})},
   bottomBar={NavigationBar{
    NavigationBarItem(tab==0,{tab=0},{Icon(Icons.Outlined.FolderOpen,null)},label={Text("My Cases")})
    NavigationBarItem(tab==1,{tab=1},{Icon(Icons.Outlined.CalendarMonth,null)},label={Text("Calendar")})
+   NavigationBarItem(tab==2,{tab=2},{Icon(Icons.Outlined.Settings,null)},label={Text("Settings")})
   }},
   floatingActionButton={if(tab==0)FloatingActionButton({showAdd=true}){Icon(Icons.Outlined.Add,"Add")} }
  ){p->
-  if(tab==0)CasesList(cases,{selected=it},{vm.delete(it)},{vm.refresh(it)},refreshing,{vm.refreshAll()},Modifier.padding(p))
-  else CalendarList(cases,{selected=it},Modifier.padding(p))
+  when(tab){
+   0->CasesList(cases,{selected=it},{vm.delete(it)},{vm.refresh(it)},refreshing,{vm.refreshAll()},Modifier.padding(p))
+   1->CalendarList(cases,{selected=it},Modifier.padding(p))
+   else->SettingsScreen(vm,Modifier.padding(p))
+  }
  }
  if(showAdd)AddDialog(loading,{if(!loading)showAdd=false}){cnr,reply->vm.add(cnr){e->reply(e);if(e==null)showAdd=false}}
 }
@@ -114,6 +119,36 @@ fun androidx.compose.foundation.lazy.LazyListScope.hearingSection(title:String,l
  item{Text(title,style=MaterialTheme.typography.titleLarge)}
  if(list.isEmpty())item{Text("No hearings",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)}
  else items(list,key={title+it.cnr}){CaseCard(it,open)}
+}
+
+@Composable fun SettingsScreen(vm:CourtDiaryViewModel,modifier:Modifier){
+ val context=LocalContext.current
+ var days by remember{mutableIntStateOf(AppPreferences.reminderDays(context))}
+ var hour by remember{mutableIntStateOf(AppPreferences.reminderHour(context))}
+ var language by remember{mutableStateOf(AppPreferences.language(context))}
+ var saved by remember{mutableStateOf(false)}
+ Column(modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
+  Text("Hearing reminder",style=MaterialTheme.typography.titleLarge)
+  Text("Notify me before the hearing")
+  SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()){
+   listOf(0 to "Same day",1 to "1 day",2 to "2 days").forEachIndexed{i,item->
+    SegmentedButton(selected=days==item.first,onClick={days=item.first;saved=false},shape=SegmentedButtonDefaults.itemShape(i,3)){Text(item.second)}
+   }
+  }
+  Text("Notification time")
+  Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+   listOf(8 to "8 AM",9 to "9 AM",18 to "6 PM").forEach{item->FilterChip(selected=hour==item.first,onClick={hour=item.first;saved=false},label={Text(item.second)})}
+  }
+  HorizontalDivider()
+  Text("Language / भाषा",style=MaterialTheme.typography.titleLarge)
+  Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+   FilterChip(selected=language=="English",onClick={language="English";saved=false},label={Text("English")})
+   FilterChip(selected=language=="Hindi",onClick={language="Hindi";saved=false},label={Text("हिन्दी")})
+  }
+  Text(if(language=="Hindi")"भाषा अगली बार ऐप खोलने पर लागू होगी।" else "Language applies when the app is opened again.",style=MaterialTheme.typography.bodySmall)
+  Spacer(Modifier.weight(1f))
+  Button({vm.saveSettings(days,hour,language){saved=true}},Modifier.fillMaxWidth()){Text(if(saved)"Saved" else "Save settings")}
+ }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
