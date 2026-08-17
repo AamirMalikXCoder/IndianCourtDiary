@@ -49,7 +49,7 @@ class CourtDiaryViewModel(private val app:Application):AndroidViewModel(app){
   return try{
    val x=CourtApiProvider.api.getCase(cnr)
    val old=dao.find(cnr)
-   dao.save(CourtCase(cnr=x.cnr,caseTitle=x.caseTitle,courtName=x.courtName,nextHearingDate=x.nextHearingDate,stage=x.stage,hearingHistoryJson=Gson().toJson(x.hearingHistory),clientName=old?.clientName.orEmpty(),clientPhone=old?.clientPhone.orEmpty(),notes=old?.notes.orEmpty(),updatedAt=System.currentTimeMillis()))
+   dao.save(CourtCase(cnr=x.cnr,caseTitle=x.caseTitle,courtName=x.courtName,nextHearingDate=x.nextHearingDate,stage=x.stage,hearingHistoryJson=Gson().toJson(x.hearingHistory),clientName=old?.clientName.orEmpty(),clientPhone=old?.clientPhone.orEmpty(),notes=old?.notes.orEmpty(),isPinned=old?.isPinned?:false,isArchived=old?.isArchived?:false,updatedAt=System.currentTimeMillis()))
    HearingReminderScheduler.schedule(app,x.cnr,x.caseTitle,x.nextHearingDate)
    null
   }catch(e:HttpException){
@@ -61,6 +61,8 @@ class CourtDiaryViewModel(private val app:Application):AndroidViewModel(app){
  fun saveMetadata(cnr:String,name:String,phone:String,notes:String,done:()->Unit)=viewModelScope.launch{
   dao.find(cnr)?.let{dao.save(it.copy(clientName=name.trim(),clientPhone=phone.trim(),notes=notes.trim()))};done()
  }
+ fun togglePinned(cnr:String)=viewModelScope.launch{dao.find(cnr)?.let{dao.save(it.copy(isPinned=!it.isPinned))}}
+ fun toggleArchived(cnr:String)=viewModelScope.launch{dao.find(cnr)?.let{dao.save(it.copy(isArchived=!it.isArchived))}}
  fun saveSettings(days:Int,hour:Int,language:String,done:()->Unit)=viewModelScope.launch{
   AppPreferences.save(app,days,hour,language)
   cases.value.forEach{HearingReminderScheduler.schedule(app,it.cnr,it.caseTitle,it.nextHearingDate)}
