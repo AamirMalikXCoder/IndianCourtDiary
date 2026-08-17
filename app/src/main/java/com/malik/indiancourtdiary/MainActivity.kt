@@ -45,15 +45,18 @@ class MainActivity:ComponentActivity(){
  var showAdd by remember{mutableStateOf(false)}
  var selected by remember{mutableStateOf<CourtCase?>(null)}
  var tab by remember{mutableIntStateOf(0)}
+ val context=LocalContext.current
+ var onboarding by remember{mutableStateOf(!AppPreferences.onboardingComplete(context))}
+ val hindi=AppPreferences.language(context)=="Hindi"
 
  if(selected!=null){CaseDetail(selected!!,vm){selected=null};return}
 
  Scaffold(
-  topBar={TopAppBar(title={Column{Text(when(tab){0->"Court Diary";1->"Hearing Calendar";else->"Settings"});Text(when(tab){0->"Your cases, organised";1->"Today, tomorrow & upcoming";else->"Reminders & language"},style=MaterialTheme.typography.labelSmall)}})},
+  topBar={TopAppBar(title={Column{Text(when(tab){0->if(hindi)"कोर्ट डायरी" else "Court Diary";1->if(hindi)"सुनवाई कैलेंडर" else "Hearing Calendar";else->if(hindi)"सेटिंग्स" else "Settings"});Text(when(tab){0->if(hindi)"आपके केस, व्यवस्थित" else "Your cases, organised";1->if(hindi)"आज, कल और आगामी" else "Today, tomorrow & upcoming";else->if(hindi)"रिमाइंडर और भाषा" else "Reminders & language"},style=MaterialTheme.typography.labelSmall)}})},
   bottomBar={NavigationBar{
-   NavigationBarItem(tab==0,{tab=0},{Icon(Icons.Outlined.FolderOpen,null)},label={Text("My Cases")})
-   NavigationBarItem(tab==1,{tab=1},{Icon(Icons.Outlined.CalendarMonth,null)},label={Text("Calendar")})
-   NavigationBarItem(tab==2,{tab=2},{Icon(Icons.Outlined.Settings,null)},label={Text("Settings")})
+   NavigationBarItem(tab==0,{tab=0},{Icon(Icons.Outlined.FolderOpen,null)},label={Text(if(hindi)"मेरे केस" else "My Cases")})
+   NavigationBarItem(tab==1,{tab=1},{Icon(Icons.Outlined.CalendarMonth,null)},label={Text(if(hindi)"कैलेंडर" else "Calendar")})
+   NavigationBarItem(tab==2,{tab=2},{Icon(Icons.Outlined.Settings,null)},label={Text(if(hindi)"सेटिंग्स" else "Settings")})
   }},
   floatingActionButton={if(tab==0)FloatingActionButton({showAdd=true}){Icon(Icons.Outlined.Add,"Add")} }
  ){p->
@@ -63,6 +66,7 @@ class MainActivity:ComponentActivity(){
    else->SettingsScreen(vm,Modifier.padding(p))
   }
  }
+ if(onboarding)OnboardingDialog{language->AppPreferences.completeOnboarding(context,language);onboarding=false}
  if(showAdd)AddDialog(loading,{if(!loading)showAdd=false}){cnr,reply->vm.add(cnr){e->reply(e);if(e==null)showAdd=false}}
 }
 
@@ -119,6 +123,25 @@ fun androidx.compose.foundation.lazy.LazyListScope.hearingSection(title:String,l
  item{Text(title,style=MaterialTheme.typography.titleLarge)}
  if(list.isEmpty())item{Text("No hearings",style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)}
  else items(list,key={title+it.cnr}){CaseCard(it,open)}
+}
+
+@Composable fun OnboardingDialog(accept:(String)->Unit){
+ var language by remember{mutableStateOf("English")}
+ AlertDialog(
+  onDismissRequest={},
+  title={Text(if(language=="Hindi")"इंडियन कोर्ट हियरिंग डायरी" else "Indian Court Hearing Diary")},
+  text={Column(verticalArrangement=Arrangement.spacedBy(12.dp)){
+   Text(if(language=="Hindi")"अपने केस, सुनवाई की तारीख और निजी नोट्स एक जगह रखें।" else "Track cases, hearing dates and private notes in one place.")
+   Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+    FilterChip(language=="English",{language="English"},label={Text("English")})
+    FilterChip(language=="Hindi",{language="Hindi"},label={Text("हिन्दी")})
+   }
+   HorizontalDivider()
+   Text(if(language=="Hindi")"महत्वपूर्ण सूचना" else "Important disclaimer",style=MaterialTheme.typography.titleMedium)
+   Text(if(language=="Hindi")"यह सरकारी ऐप नहीं है और भारतीय न्यायपालिका या eCourts से संबद्ध नहीं है। डेटा में देरी या त्रुटि हो सकती है। अदालत में उपस्थित होने से पहले आधिकारिक cause list या संबंधित अदालत से सुनवाई की पुष्टि करें। यह कानूनी सलाह नहीं है।" else "This is not a government app and is not affiliated with the Indian judiciary or eCourts. Data may be delayed or incorrect. Confirm every hearing with the official cause list or court before attending. This app does not provide legal advice.")
+  }},
+  confirmButton={Button({accept(language)}){Text(if(language=="Hindi")"समझ गया, जारी रखें" else "I understand, continue")}}
+ )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
