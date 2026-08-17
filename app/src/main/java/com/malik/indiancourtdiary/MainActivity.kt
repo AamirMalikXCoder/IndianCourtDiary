@@ -213,9 +213,16 @@ fun androidx.compose.foundation.lazy.LazyListScope.hearingSection(title:String,l
  var hour by remember{mutableIntStateOf(AppPreferences.reminderHour(context))}
  var language by remember{mutableStateOf(AppPreferences.language(context))}
  var saved by remember{mutableStateOf(false)}
+ var autoSync by remember{mutableStateOf(AppPreferences.autoSync(context))}
  var legalPage by remember{mutableStateOf<String?>(null)}
  if(legalPage!=null){LegalPage(legalPage!!){legalPage=null};return}
  LazyColumn(modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
+  item{Text("Automatic updates",style=MaterialTheme.typography.headlineSmall,color=CourtGold)}
+  item{PremiumPanel{
+   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text("Daily case sync",style=MaterialTheme.typography.titleMedium);Text("Checks active cases once every 24 hours",style=MaterialTheme.typography.bodySmall,color=CourtMuted)};Switch(autoSync,{autoSync=it;vm.setAutoSync(it)})}
+   Spacer(Modifier.height(10.dp))
+   Text("Uses paid API credits for each active case. Keep this off if you prefer manual refresh.",style=MaterialTheme.typography.bodySmall,color=if(autoSync)Color(0xFFFFD180) else CourtMuted)
+  }}
   item{Text("Hearing reminders",style=MaterialTheme.typography.headlineSmall,color=CourtGold)}
   item{PremiumPanel{Text("Notify me before the hearing");Spacer(Modifier.height(12.dp));SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()){listOf(0 to "Same day",1 to "1 day",2 to "2 days").forEachIndexed{i,item->SegmentedButton(selected=days==item.first,onClick={days=item.first;saved=false},shape=SegmentedButtonDefaults.itemShape(i,3)){Text(item.second)}}};Spacer(Modifier.height(16.dp));Text("Notification time");Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf(8 to "8 AM",9 to "9 AM",18 to "6 PM").forEach{item->FilterChip(selected=hour==item.first,onClick={hour=item.first;saved=false},label={Text(item.second)})}}}}
   item{Text("Language / भाषा",style=MaterialTheme.typography.titleLarge)}
