@@ -4,6 +4,8 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
 }
+val courtAppKey = providers.gradleProperty("COURT_APP_KEY").orElse("").get()
+
 android {
     namespace = "com.malik.indiancourtdiary"
     compileSdk = 35
@@ -14,6 +16,7 @@ android {
         versionCode = 1
         versionName = "1.0.0"
         buildConfigField("String", "API_BASE_URL", "\"https://court.reports.ink/api/\"")
+        buildConfigField("String", "APP_CLIENT_KEY", "\"$courtAppKey\"")
     }
     buildFeatures { compose = true; buildConfig = true }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
