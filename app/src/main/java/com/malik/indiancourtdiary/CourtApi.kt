@@ -1,4 +1,5 @@
 package com.malik.indiancourtdiary
+import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
@@ -14,4 +15,10 @@ data class CaseResponse(
  val hearingHistory:List<HearingResponse> = emptyList()
 )
 interface CourtApi{@GET("v1/cases/{cnr}")suspend fun getCase(@Path("cnr")cnr:String):CaseResponse}
-object CourtApiProvider{val api:CourtApi by lazy{Retrofit.Builder().baseUrl(BuildConfig.API_BASE_URL).addConverterFactory(GsonConverterFactory.create()).build().create(CourtApi::class.java)}}
+object CourtApiProvider{val api:CourtApi by lazy{
+ val client=OkHttpClient.Builder().addInterceptor{chain->
+  val builder=chain.request().newBuilder()
+  if(BuildConfig.APP_CLIENT_KEY.isNotBlank())builder.header("X-App-Key",BuildConfig.APP_CLIENT_KEY)
+  chain.proceed(builder.build())
+ }.build()
+ Retrofit.Builder().baseUrl(BuildConfig.API_BASE_URL).client(client).addConverterFactory(GsonConverterFactory.create()).build().create(CourtApi::class.java)}}
