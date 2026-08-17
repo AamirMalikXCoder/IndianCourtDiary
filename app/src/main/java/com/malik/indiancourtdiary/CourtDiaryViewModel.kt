@@ -21,12 +21,21 @@ class CourtDiaryViewModel(private val app:Application):AndroidViewModel(app){
   if(_isAdding.value)return
   viewModelScope.launch{
    _isAdding.value=true
-   try{val x=CourtApiProvider.api.getCase(cnr);dao.save(CourtCase(cnr=x.cnr,caseTitle=x.caseTitle,courtName=x.courtName,nextHearingDate=x.nextHearingDate,stage=x.stage,hearingHistoryJson=Gson().toJson(x.hearingHistory)));HearingReminderScheduler.schedule(app,x.cnr,x.caseTitle,x.nextHearingDate);done(null)}
+   try{
+    val x=CourtApiProvider.api.getCase(cnr)
+    val old=dao.find(cnr)
+    dao.save(CourtCase(cnr=x.cnr,caseTitle=x.caseTitle,courtName=x.courtName,nextHearingDate=x.nextHearingDate,stage=x.stage,hearingHistoryJson=Gson().toJson(x.hearingHistory),clientName=old?.clientName.orEmpty(),clientPhone=old?.clientPhone.orEmpty(),notes=old?.notes.orEmpty()))
+    HearingReminderScheduler.schedule(app,x.cnr,x.caseTitle,x.nextHearingDate);done(null)
+   }
    catch(e:HttpException){done(when(e.code()){404->"Case not found. Check the CNR number.";429->"Too many requests. Please try again later.";503->"Court service is not configured yet.";else->"Court service error. Please try again."})}
    catch(e:IOException){done("No internet connection or server unavailable.")}
    catch(e:Exception){done("Could not sync this case. Please try again.")}
    finally{_isAdding.value=false}
   }
+ }
+ fun saveMetadata(cnr:String,name:String,phone:String,notes:String,done:()->Unit)=viewModelScope.launch{
+  dao.find(cnr)?.let{dao.save(it.copy(clientName=name.trim(),clientPhone=phone.trim(),notes=notes.trim()))}
+  done()
  }
  fun delete(cnr:String)=viewModelScope.launch{dao.delete(cnr);HearingReminderScheduler.cancel(app,cnr)}
 }
