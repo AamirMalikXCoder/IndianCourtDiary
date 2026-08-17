@@ -73,12 +73,34 @@ class MainActivity:ComponentActivity(){
  if(showAdd)AddDialog(loading,{if(!loading)showAdd=false}){cnr,reply->vm.add(cnr){e->reply(e);if(e==null)showAdd=false}}
 }
 
+@Composable fun SummaryDashboard(cases:List<CourtCase>){
+ val today=LocalDate.now()
+ val dates=cases.mapNotNull{runCatching{LocalDate.parse(it.nextHearingDate?.take(10))}.getOrNull()}
+ val todayCount=dates.count{it==today}
+ val upcoming=dates.count{it>today}
+ Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=12.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)){
+  SummaryCard("Total",cases.size.toString(),Icons.Outlined.FolderOpen,Modifier.weight(1f))
+  SummaryCard("Today",todayCount.toString(),Icons.Outlined.Today,Modifier.weight(1f))
+  SummaryCard("Upcoming",upcoming.toString(),Icons.Outlined.Event,Modifier.weight(1f))
+ }
+}
+@Composable fun SummaryCard(label:String,value:String,icon:androidx.compose.ui.graphics.vector.ImageVector,modifier:Modifier){
+ ElevatedCard(modifier,colors=CardDefaults.elevatedCardColors(containerColor=CourtSurfaceHigh)){
+  Column(Modifier.fillMaxWidth().padding(12.dp),horizontalAlignment=Alignment.CenterHorizontally){
+   Icon(icon,null,tint=CourtGold,modifier=Modifier.size(22.dp));Spacer(Modifier.height(6.dp))
+   Text(value,style=MaterialTheme.typography.headlineSmall,color=CourtText)
+   Text(label,style=MaterialTheme.typography.labelSmall,color=CourtMuted)
+  }
+ }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun CasesList(cases:List<CourtCase>,open:(CourtCase)->Unit,delete:(String)->Unit,refresh:(String)->Unit,refreshing:Boolean,refreshAll:()->Unit,modifier:Modifier){
  var query by remember{mutableStateOf("")}
  val filtered=remember(cases,query){if(query.isBlank())cases else cases.filter{it.cnr.contains(query,true)||it.caseTitle.contains(query,true)||it.courtName.contains(query,true)||it.clientName.contains(query,true)}}
  PullToRefreshBox(isRefreshing=refreshing,onRefresh=refreshAll,modifier=modifier){
   Column{
+   SummaryDashboard(cases)
    OutlinedTextField(query,{query=it},Modifier.fillMaxWidth().padding(16.dp),label={Text("Search cases")},leadingIcon={Icon(Icons.Outlined.Search,null)},singleLine=true)
    if(filtered.isEmpty())Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Text(if(cases.isEmpty())"No cases added\nTap + and enter the CNR number." else "No matching cases")}
    else LazyColumn(contentPadding=PaddingValues(horizontal=16.dp,vertical=4.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
