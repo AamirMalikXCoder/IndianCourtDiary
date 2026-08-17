@@ -12,5 +12,7 @@ data class CourtCase(
  val clientName:String="",
  val clientPhone:String="",
  val notes:String="",
+ val isPinned:Boolean=false,
+ val isArchived:Boolean=false,
  val updatedAt:Long=System.currentTimeMillis()
 )
