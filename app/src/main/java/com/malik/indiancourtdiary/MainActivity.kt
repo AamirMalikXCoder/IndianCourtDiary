@@ -237,7 +237,7 @@ fun androidx.compose.foundation.lazy.LazyListScope.hearingSection(title:String,l
  var saved by remember{mutableStateOf(false)}
  Scaffold(topBar={TopAppBar(title={Text("Case Details")},navigationIcon={IconButton(back){Icon(Icons.Outlined.ArrowBack,"Back")}})}){p->
   LazyColumn(Modifier.padding(p),contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-   item{ElevatedCard{Column(Modifier.fillMaxWidth().padding(16.dp)){Text(c.caseTitle,style=MaterialTheme.typography.titleLarge);Text(c.cnr,color=MaterialTheme.colorScheme.primary);Text(c.courtName);Text("Stage: "+c.stage);Text(c.nextHearingDate?.let{"Next hearing: $it"}?:"Next hearing unavailable")}}}
+   item{ElevatedCard{Column(Modifier.fillMaxWidth().padding(16.dp)){Text(c.caseTitle,style=MaterialTheme.typography.titleLarge);Text(c.cnr,color=MaterialTheme.colorScheme.primary);Text(c.courtName);Text("Stage: "+c.stage);Text(c.nextHearingDate?.let{"Next hearing: $it"}?:"Next hearing unavailable");Spacer(Modifier.height(8.dp));val urgency=hearingUrgency(c.nextHearingDate);StatusBadge(urgency.label,urgency.color,urgency.container)}}}
    item{Text("Client & Private Notes",style=MaterialTheme.typography.titleLarge)}
    item{OutlinedTextField(name,{name=it;saved=false},Modifier.fillMaxWidth(),label={Text("Client name")},singleLine=true)}
    item{OutlinedTextField(phone,{phone=it;saved=false},Modifier.fillMaxWidth(),label={Text("Mobile number")},singleLine=true)}
