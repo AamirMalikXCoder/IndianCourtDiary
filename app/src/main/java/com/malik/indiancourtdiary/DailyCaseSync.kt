@@ -18,6 +18,7 @@ import com.google.gson.Gson
 import java.util.concurrent.TimeUnit
 
 object DailyCaseSyncScheduler {
+ fun cancel(context:Context){WorkManager.getInstance(context).cancelUniqueWork("daily-court-sync")}
  fun schedule(context:Context){
   val constraints=Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
   val request=PeriodicWorkRequestBuilder<DailyCaseSyncWorker>(24,TimeUnit.HOURS).setConstraints(constraints).build()
