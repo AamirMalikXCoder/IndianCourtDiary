@@ -60,12 +60,16 @@ if ($status < 200 || $status >= 300) {
 
 $provider = json_decode($body, true);
 $case = $provider['data']['courtCaseData'] ?? [];
+$history = array_map(static function (array $h): array {
+    return ['date'=>$h['hearingDate']??$h['date']??null,'purpose'=>$h['purposeOfHearing']??$h['businessOnDate']??null,'judge'=>$h['judge']??$h['judgeName']??null,'status'=>$h['stage']??$h['status']??null];
+}, $case['historyOfCaseHearings'] ?? []);
 $result = [
     'cnr' => $cnr,
     'caseTitle' => $case['caseTitle'] ?? $case['caseName'] ?? 'Court case',
     'courtName' => $case['courtName'] ?? 'Court unavailable',
     'nextHearingDate' => $case['nextHearingDate'] ?? null,
     'stage' => $case['stageOfCase'] ?? $case['caseStatus'] ?? 'Unknown',
+    'hearingHistory' => $history,
 ];
 $json = json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 file_put_contents($cacheFile, $json, LOCK_EX);
