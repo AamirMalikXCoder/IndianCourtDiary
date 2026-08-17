@@ -8,6 +8,7 @@ data class CourtCase(
     val courtName: String = "Court will appear after sync",
     val nextHearingDate: String? = null,
     val stage: String = "Not synced",
+    val hearingHistoryJson: String = "[]",
     val notes: String = "",
     val updatedAt: Long = System.currentTimeMillis()
 )
