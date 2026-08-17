@@ -9,6 +9,7 @@ if (!is_file($configPath)) {
     respond(503, ['error' => ['code' => 'NOT_CONFIGURED', 'message' => 'Backend configuration is missing']]);
 }
 $config = require $configPath;
+require_once dirname(__DIR__) . '/src/Security.php';
 header('Access-Control-Allow-Origin: ' . ($config['allowed_origin'] ?? '*'));
 
 $path = trim((string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/');
@@ -17,6 +18,8 @@ $path = preg_replace('#^api/#', '', $path);
 if ($path === 'health') {
     respond(200, ['status' => 'ok', 'service' => 'Indian Court Diary API']);
 }
+if ($path !== 'health') secure_request($config, 'case_lookup');
+
 if (!preg_match('#^v1/cases/([A-Za-z]{4}[0-9]{12})$#', $path, $match)) {
     respond(404, ['error' => ['code' => 'NOT_FOUND', 'message' => 'Route not found']]);
 }
