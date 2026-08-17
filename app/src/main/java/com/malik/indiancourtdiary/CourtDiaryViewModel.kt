@@ -61,5 +61,10 @@ class CourtDiaryViewModel(private val app:Application):AndroidViewModel(app){
  fun saveMetadata(cnr:String,name:String,phone:String,notes:String,done:()->Unit)=viewModelScope.launch{
   dao.find(cnr)?.let{dao.save(it.copy(clientName=name.trim(),clientPhone=phone.trim(),notes=notes.trim()))};done()
  }
+ fun saveSettings(days:Int,hour:Int,language:String,done:()->Unit)=viewModelScope.launch{
+  AppPreferences.save(app,days,hour,language)
+  cases.value.forEach{HearingReminderScheduler.schedule(app,it.cnr,it.caseTitle,it.nextHearingDate)}
+  done()
+ }
  fun delete(cnr:String)=viewModelScope.launch{dao.delete(cnr);HearingReminderScheduler.cancel(app,cnr)}
 }
