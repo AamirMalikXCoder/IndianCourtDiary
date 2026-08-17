@@ -33,7 +33,7 @@ class MainActivity:ComponentActivity(){
  override fun onCreate(b:Bundle?){
   super.onCreate(b)
   if(Build.VERSION.SDK_INT>=33)ActivityCompat.requestPermissions(this,arrayOf(Manifest.permission.POST_NOTIFICATIONS),1001)
-  setContent{MaterialTheme{Diary()}}
+  setContent{CourtPremiumTheme{Diary()}}
  }
 }
 
@@ -52,13 +52,14 @@ class MainActivity:ComponentActivity(){
  if(selected!=null){CaseDetail(selected!!,vm){selected=null};return}
 
  Scaffold(
-  topBar={TopAppBar(title={Column{Text(when(tab){0->if(hindi)"कोर्ट डायरी" else "Court Diary";1->if(hindi)"सुनवाई कैलेंडर" else "Hearing Calendar";else->if(hindi)"सेटिंग्स" else "Settings"});Text(when(tab){0->if(hindi)"आपके केस, व्यवस्थित" else "Your cases, organised";1->if(hindi)"आज, कल और आगामी" else "Today, tomorrow & upcoming";else->if(hindi)"रिमाइंडर और भाषा" else "Reminders & language"},style=MaterialTheme.typography.labelSmall)}})},
-  bottomBar={NavigationBar{
+  containerColor=CourtNavy,
+  topBar={TopAppBar(title={Column{Text(when(tab){0->if(hindi)"कोर्ट डायरी" else "Court Diary";1->if(hindi)"सुनवाई कैलेंडर" else "Hearing Calendar";else->if(hindi)"सेटिंग्स" else "Settings"});Text(when(tab){0->if(hindi)"आपके केस, व्यवस्थित" else "Your cases, organised";1->if(hindi)"आज, कल और आगामी" else "Today, tomorrow & upcoming";else->if(hindi)"रिमाइंडर और भाषा" else "Reminders & language"},style=MaterialTheme.typography.labelSmall,color=CourtMuted)}},colors=TopAppBarDefaults.topAppBarColors(containerColor=CourtNavy,titleContentColor=CourtText))},
+  bottomBar={NavigationBar(containerColor=CourtSurface){
    NavigationBarItem(tab==0,{tab=0},{Icon(Icons.Outlined.FolderOpen,null)},label={Text(if(hindi)"मेरे केस" else "My Cases")})
    NavigationBarItem(tab==1,{tab=1},{Icon(Icons.Outlined.CalendarMonth,null)},label={Text(if(hindi)"कैलेंडर" else "Calendar")})
    NavigationBarItem(tab==2,{tab=2},{Icon(Icons.Outlined.Settings,null)},label={Text(if(hindi)"सेटिंग्स" else "Settings")})
   }},
-  floatingActionButton={if(tab==0)FloatingActionButton({showAdd=true}){Icon(Icons.Outlined.Add,"Add")} }
+  floatingActionButton={if(tab==0)FloatingActionButton({showAdd=true},containerColor=CourtGold,contentColor=CourtNavy){Icon(Icons.Outlined.Add,"Add")} }
  ){p->
   when(tab){
    0->CasesList(cases,{selected=it},{vm.delete(it)},{vm.refresh(it)},refreshing,{vm.refreshAll()},Modifier.padding(p))
@@ -151,28 +152,33 @@ fun androidx.compose.foundation.lazy.LazyListScope.hearingSection(title:String,l
  var hour by remember{mutableIntStateOf(AppPreferences.reminderHour(context))}
  var language by remember{mutableStateOf(AppPreferences.language(context))}
  var saved by remember{mutableStateOf(false)}
- Column(modifier.fillMaxSize().padding(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
-  Text("Hearing reminder",style=MaterialTheme.typography.titleLarge)
-  Text("Notify me before the hearing")
-  SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()){
-   listOf(0 to "Same day",1 to "1 day",2 to "2 days").forEachIndexed{i,item->
-    SegmentedButton(selected=days==item.first,onClick={days=item.first;saved=false},shape=SegmentedButtonDefaults.itemShape(i,3)){Text(item.second)}
-   }
-  }
-  Text("Notification time")
-  Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-   listOf(8 to "8 AM",9 to "9 AM",18 to "6 PM").forEach{item->FilterChip(selected=hour==item.first,onClick={hour=item.first;saved=false},label={Text(item.second)})}
-  }
-  HorizontalDivider()
-  Text("Language / भाषा",style=MaterialTheme.typography.titleLarge)
-  Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-   FilterChip(selected=language=="English",onClick={language="English";saved=false},label={Text("English")})
-   FilterChip(selected=language=="Hindi",onClick={language="Hindi";saved=false},label={Text("हिन्दी")})
-  }
-  Text(if(language=="Hindi")"भाषा अगली बार ऐप खोलने पर लागू होगी।" else "Language applies when the app is opened again.",style=MaterialTheme.typography.bodySmall)
-  Spacer(Modifier.weight(1f))
-  Button({vm.saveSettings(days,hour,language){saved=true}},Modifier.fillMaxWidth()){Text(if(saved)"Saved" else "Save settings")}
+ var legalPage by remember{mutableStateOf<String?>(null)}
+ if(legalPage!=null){LegalPage(legalPage!!){legalPage=null};return}
+ LazyColumn(modifier.fillMaxSize(),contentPadding=PaddingValues(20.dp),verticalArrangement=Arrangement.spacedBy(16.dp)){
+  item{Text("Hearing reminders",style=MaterialTheme.typography.headlineSmall,color=CourtGold)}
+  item{PremiumPanel{Text("Notify me before the hearing");Spacer(Modifier.height(12.dp));SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()){listOf(0 to "Same day",1 to "1 day",2 to "2 days").forEachIndexed{i,item->SegmentedButton(selected=days==item.first,onClick={days=item.first;saved=false},shape=SegmentedButtonDefaults.itemShape(i,3)){Text(item.second)}}};Spacer(Modifier.height(16.dp));Text("Notification time");Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){listOf(8 to "8 AM",9 to "9 AM",18 to "6 PM").forEach{item->FilterChip(selected=hour==item.first,onClick={hour=item.first;saved=false},label={Text(item.second)})}}}}
+  item{Text("Language / भाषा",style=MaterialTheme.typography.titleLarge)}
+  item{PremiumPanel{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FilterChip(language=="English",{language="English";saved=false},label={Text("English")});FilterChip(language=="Hindi",{language="Hindi";saved=false},label={Text("हिन्दी")})};Text(if(language=="Hindi")"अगली बार ऐप खोलने पर लागू होगा।" else "Applies when the app is opened again.",style=MaterialTheme.typography.bodySmall,color=CourtMuted)}}
+  item{Button({vm.saveSettings(days,hour,language){saved=true}},Modifier.fillMaxWidth()){Text(if(saved)"Saved" else "Save settings")}}
+  item{Text("Legal & support",style=MaterialTheme.typography.titleLarge)}
+  items(listOf("Privacy Policy","Terms of Use","About","Contact")){page->ElevatedCard(Modifier.fillMaxWidth().clickable{legalPage=page}){Row(Modifier.fillMaxWidth().padding(18.dp),verticalAlignment=Alignment.CenterVertically){Icon(when(page){"Privacy Policy"->Icons.Outlined.PrivacyTip;"Terms of Use"->Icons.Outlined.Description;"About"->Icons.Outlined.Info;else->Icons.Outlined.Email},null,tint=CourtGold);Spacer(Modifier.width(14.dp));Text(page,Modifier.weight(1f));Icon(Icons.Outlined.ChevronRight,null,color=CourtMuted)}}}
  }
+}
+
+@Composable fun PremiumPanel(content:@Composable ColumnScope.()->Unit){
+ ElevatedCard(Modifier.fillMaxWidth(),colors=CardDefaults.elevatedCardColors(containerColor=CourtSurfaceHigh)){Column(Modifier.fillMaxWidth().padding(18.dp),content=content)}
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable fun LegalPage(page:String,back:()->Unit){
+ BackHandler(onBack=back)
+ val body=when(page){
+  "Privacy Policy"->"Your saved cases, client names, phone numbers and private notes remain in the app's local database. CNR numbers are sent to court.reports.ink only when you add or refresh a case. The server uses them to retrieve court information and may temporarily cache court responses. We do not sell personal data. Do not enter confidential information that is not required."
+  "Terms of Use"->"This is an independent, non-government case diary. It is not affiliated with the Indian judiciary, eCourts or any court. Court data can be delayed, incomplete or incorrect. Always verify hearings, courtroom and cause-list position through official sources. The app is not legal advice and reminders are convenience alerts only."
+  "About"->"Indian Court Hearing Diary helps litigants and advocates organise CNR-based cases, hearing dates, history, reminders and private notes. App version 1.0.0."
+  else->"Support website: https://court.reports.ink\n\nWhen contacting support, describe the issue and app version. Never send passwords, OTPs, payment details or confidential legal documents."
+ }
+ Scaffold(containerColor=CourtNavy,topBar={TopAppBar(title={Text(page)},navigationIcon={IconButton(back){Icon(Icons.Outlined.ArrowBack,"Back")}},colors=TopAppBarDefaults.topAppBarColors(containerColor=CourtNavy))}){p->Column(Modifier.padding(p).padding(20.dp)){PremiumPanel{Text(body,style=MaterialTheme.typography.bodyLarge);if(page=="Privacy Policy"||page=="Terms of Use"){Spacer(Modifier.height(16.dp));Text("Last updated: 18 August 2026",style=MaterialTheme.typography.labelMedium,color=CourtGold)}}}}
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
