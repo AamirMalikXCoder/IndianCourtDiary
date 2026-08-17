@@ -14,6 +14,16 @@ object AppPreferences {
     fun language(context: Context): String =
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getString("language", "English") ?: "English"
 
+    fun onboardingComplete(context: Context): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean("onboarding_complete", false)
+
+    fun completeOnboarding(context: Context, language: String) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
+            .putBoolean("onboarding_complete", true)
+            .putString("language", language)
+            .apply()
+    }
+
     fun save(context: Context, days: Int, hour: Int, language: String) {
         context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
             .putInt("reminder_days", days)
