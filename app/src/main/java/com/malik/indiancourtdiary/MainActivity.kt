@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,7 +23,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.malik.indiancourtdiary.data.CourtCase
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 class MainActivity:ComponentActivity(){
  override fun onCreate(b:Bundle?){
@@ -36,6 +40,7 @@ class MainActivity:ComponentActivity(){
 @Composable fun Diary(vm:CourtDiaryViewModel= viewModel()){
  val cases by vm.cases.collectAsStateWithLifecycle()
  val loading by vm.isAdding.collectAsStateWithLifecycle()
+ val refreshing by vm.isRefreshing.collectAsStateWithLifecycle()
  var showAdd by remember{mutableStateOf(false)}
  var selected by remember{mutableStateOf<CourtCase?>(null)}
  var tab by remember{mutableIntStateOf(0)}
@@ -50,26 +55,29 @@ class MainActivity:ComponentActivity(){
   }},
   floatingActionButton={if(tab==0)FloatingActionButton({showAdd=true}){Icon(Icons.Outlined.Add,"Add")} }
  ){p->
-  if(tab==0)CasesList(cases,{selected=it},{vm.delete(it)},Modifier.padding(p))
+  if(tab==0)CasesList(cases,{selected=it},{vm.delete(it)},{vm.refresh(it)},refreshing,{vm.refreshAll()},Modifier.padding(p))
   else CalendarList(cases,{selected=it},Modifier.padding(p))
  }
  if(showAdd)AddDialog(loading,{if(!loading)showAdd=false}){cnr,reply->vm.add(cnr){e->reply(e);if(e==null)showAdd=false}}
 }
 
-@Composable fun CasesList(cases:List<CourtCase>,open:(CourtCase)->Unit,delete:(String)->Unit,modifier:Modifier){
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable fun CasesList(cases:List<CourtCase>,open:(CourtCase)->Unit,delete:(String)->Unit,refresh:(String)->Unit,refreshing:Boolean,refreshAll:()->Unit,modifier:Modifier){
  var query by remember{mutableStateOf("")}
  val filtered=remember(cases,query){if(query.isBlank())cases else cases.filter{it.cnr.contains(query,true)||it.caseTitle.contains(query,true)||it.courtName.contains(query,true)||it.clientName.contains(query,true)}}
- Column(modifier){
-  OutlinedTextField(query,{query=it},Modifier.fillMaxWidth().padding(16.dp),label={Text("Search cases")},leadingIcon={Icon(Icons.Outlined.Search,null)},singleLine=true)
-  if(filtered.isEmpty())Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Text(if(cases.isEmpty())"No cases added\nTap + and enter the CNR number." else "No matching cases")}
-  else LazyColumn(contentPadding=PaddingValues(horizontal=16.dp,vertical=4.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-   item{Text("My Cases",style=MaterialTheme.typography.headlineSmall)}
-   items(filtered,key={it.cnr}){item->CaseCard(item,open,delete)}
+ PullToRefreshBox(isRefreshing=refreshing,onRefresh=refreshAll,modifier=modifier){
+  Column{
+   OutlinedTextField(query,{query=it},Modifier.fillMaxWidth().padding(16.dp),label={Text("Search cases")},leadingIcon={Icon(Icons.Outlined.Search,null)},singleLine=true)
+   if(filtered.isEmpty())Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Text(if(cases.isEmpty())"No cases added\nTap + and enter the CNR number." else "No matching cases")}
+   else LazyColumn(contentPadding=PaddingValues(horizontal=16.dp,vertical=4.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+    item{Text("My Cases",style=MaterialTheme.typography.headlineSmall)}
+    items(filtered,key={it.cnr}){item->CaseCard(item,open,delete,refresh)}
+   }
   }
  }
 }
 
-@Composable fun CaseCard(c:CourtCase,open:(CourtCase)->Unit,delete:((String)->Unit)?=null){
+@Composable fun CaseCard(c:CourtCase,open:(CourtCase)->Unit,delete:((String)->Unit)?=null,refresh:((String)->Unit)?=null){
  ElevatedCard(Modifier.fillMaxWidth().clickable{open(c)}){
   Column(Modifier.padding(16.dp)){
    Text(c.caseTitle,style=MaterialTheme.typography.titleMedium)
@@ -77,10 +85,16 @@ class MainActivity:ComponentActivity(){
    Text(c.courtName)
    Text("Stage: "+c.stage)
    Text(c.nextHearingDate?.let{"Next hearing: $it"}?:"Hearing date unavailable")
-   if(delete!=null)IconButton({delete(c.cnr)}){Icon(Icons.Outlined.Delete,"Delete")}
+   Text("Updated: "+formatUpdated(c.updatedAt),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+   if(delete!=null||refresh!=null)Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End){
+    if(refresh!=null)IconButton({refresh(c.cnr)}){Icon(Icons.Outlined.Refresh,"Refresh")}
+    if(delete!=null)IconButton({delete(c.cnr)}){Icon(Icons.Outlined.Delete,"Delete")}
+   }
   }
  }
 }
+
+fun formatUpdated(time:Long):String=DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a").format(Instant.ofEpochMilli(time).atZone(ZoneId.systemDefault()))
 
 @Composable fun CalendarList(cases:List<CourtCase>,open:(CourtCase)->Unit,modifier:Modifier){
  val today=LocalDate.now()
