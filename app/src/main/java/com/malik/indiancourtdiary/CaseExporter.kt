@@ -37,8 +37,8 @@ object CaseExporter {
   fun row(label:String,value:String){canvas.drawText(label.uppercase(),42f,y,gold);y+=18f;value.chunked(78).forEach{line->canvas.drawText(line,42f,y,body);y+=16f};y+=8f}
   row("Case",item.caseTitle);row("CNR",item.cnr);row("Court",item.courtName);row("Current stage",item.stage);row("Next hearing",item.nextHearingDate?:"Not available")
   if(item.clientName.isNotBlank())row("Client",item.clientName);if(item.clientPhone.isNotBlank())row("Mobile",item.clientPhone);if(item.notes.isNotBlank())row("Private notes",item.notes)
-  val type=object:TypeToken<List<HearingResponse>>(){}.type
-  val history=runCatching{Gson().fromJson<List<HearingResponse>>(item.hearingHistoryJson,type)}.getOrDefault(emptyList())
+  val historyType=(object:TypeToken<List<HearingResponse>>(){}).type
+  val history=runCatching{Gson().fromJson<List<HearingResponse>>(item.hearingHistoryJson,historyType)}.getOrDefault(emptyList())
   if(history.isNotEmpty()&&y<680f){canvas.drawText("RECENT HEARINGS",42f,y,gold);y+=22f;history.take(8).forEach{h->val line=listOfNotNull(h.date,h.purpose,h.status).joinToString(" • ");line.chunked(82).forEach{part->if(y<755f){canvas.drawText(part,42f,y,body);y+=15f}};y+=5f}}
   canvas.drawLine(42f,780f,553f,780f,Paint().apply{color=Color.LTGRAY});canvas.drawText("Independent non-government diary. Verify all hearings with official court sources.",42f,800f,muted)
   document.finishPage(page);file.outputStream().use{document.writeTo(it)};document.close()
