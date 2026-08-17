@@ -1,0 +1,26 @@
+name: Backend cPanel package
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-package.yml"
+  workflow_dispatch:
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate PHP syntax
+        run: find backend -name "*.php" ! -name "config.php" -print0 | xargs -0 -n1 php -l
+      - name: Build upload package
+        run: |
+          mkdir -p package
+          cp -R backend package/IndianCourtDiaryBackend
+          cd package
+          zip -r ../IndianCourtDiary-cPanel.zip IndianCourtDiaryBackend
+      - uses: actions/upload-artifact@v4
+        with:
+          name: IndianCourtDiary-cPanel
+          path: IndianCourtDiary-cPanel.zip
+          retention-days: 30
