@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
@@ -29,6 +30,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 class MainActivity:ComponentActivity(){
  override fun onCreate(b:Bundle?){
@@ -111,23 +113,42 @@ class MainActivity:ComponentActivity(){
  }
 }
 
+data class HearingUrgency(val label:String,val color:Color,val container:Color)
+fun hearingUrgency(raw:String?):HearingUrgency{
+ val date=runCatching{LocalDate.parse(raw?.take(10))}.getOrNull()?:return HearingUrgency("Date pending",CourtMuted,CourtSurfaceHigh)
+ val days=ChronoUnit.DAYS.between(LocalDate.now(),date)
+ return when{
+  days<0->HearingUrgency("Past date",CourtMuted,CourtSurfaceHigh)
+  days==0L->HearingUrgency("Today",Color(0xFFFF8A80),Color(0xFF4A1F25))
+  days==1L->HearingUrgency("Tomorrow",Color(0xFFFFD180),Color(0xFF493515))
+  days<=7L->HearingUrgency("$days days left",Color(0xFF80D8FF),Color(0xFF15364A))
+  else->HearingUrgency("$days days left",Color(0xFFA7E8BD),Color(0xFF173C2B))
+ }
+}
+@Composable fun StatusBadge(text:String,color:Color,container:Color){
+ Surface(color=container,shape=MaterialTheme.shapes.small){Text(text,Modifier.padding(horizontal=10.dp,vertical=6.dp),style=MaterialTheme.typography.labelMedium,color=color)}
+}
 @Composable fun CaseCard(c:CourtCase,open:(CourtCase)->Unit,delete:((String)->Unit)?=null,refresh:((String)->Unit)?=null){
- ElevatedCard(Modifier.fillMaxWidth().clickable{open(c)}){
-  Column(Modifier.padding(16.dp)){
-   Text(c.caseTitle,style=MaterialTheme.typography.titleMedium)
-   Text(c.cnr,color=MaterialTheme.colorScheme.primary)
-   Text(c.courtName)
-   Text("Stage: "+c.stage)
-   Text(c.nextHearingDate?.let{"Next hearing: $it"}?:"Hearing date unavailable")
-   Text("Updated: "+formatUpdated(c.updatedAt),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+ val urgency=hearingUrgency(c.nextHearingDate)
+ ElevatedCard(Modifier.fillMaxWidth().clickable{open(c)},colors=CardDefaults.elevatedCardColors(containerColor=CourtSurfaceHigh)){
+  Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
+   Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.Top){
+    Column(Modifier.weight(1f)){Text(c.caseTitle,style=MaterialTheme.typography.titleMedium);Text(c.cnr,color=CourtGold,style=MaterialTheme.typography.labelMedium)}
+    StatusBadge(urgency.label,urgency.color,urgency.container)
+   }
+   Text(c.courtName,color=CourtMuted)
+   Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+    StatusBadge(c.stage.ifBlank{"Status pending"},CourtText,CourtSurface)
+   }
+   Text(c.nextHearingDate?.let{"Next hearing • $it"}?:"Hearing date unavailable",style=MaterialTheme.typography.bodyMedium)
+   Text("Updated "+formatUpdated(c.updatedAt),style=MaterialTheme.typography.labelSmall,color=CourtMuted)
    if(delete!=null||refresh!=null)Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End){
-    if(refresh!=null)IconButton({refresh(c.cnr)}){Icon(Icons.Outlined.Refresh,"Refresh")}
-    if(delete!=null)IconButton({delete(c.cnr)}){Icon(Icons.Outlined.Delete,"Delete")}
+    if(refresh!=null)IconButton({refresh(c.cnr)}){Icon(Icons.Outlined.Refresh,"Refresh",tint=CourtGold)}
+    if(delete!=null)IconButton({delete(c.cnr)}){Icon(Icons.Outlined.Delete,"Delete",tint=MaterialTheme.colorScheme.error)}
    }
   }
  }
 }
-
 fun formatUpdated(time:Long):String=DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a").format(Instant.ofEpochMilli(time).atZone(ZoneId.systemDefault()))
 
 @Composable fun CalendarList(cases:List<CourtCase>,open:(CourtCase)->Unit,modifier:Modifier){
