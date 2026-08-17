@@ -22,7 +22,9 @@ object HearingReminderScheduler {
     fun schedule(context: Context, cnr: String, title: String, hearingDate: String?) {
         if (hearingDate.isNullOrBlank()) return
         val date = runCatching { LocalDate.parse(hearingDate.take(10)) }.getOrNull() ?: return
-        val reminderAt = LocalDateTime.of(date.minusDays(1), LocalTime.of(9, 0))
+        val days = AppPreferences.reminderDays(context).toLong()
+        val hour = AppPreferences.reminderHour(context).coerceIn(0, 23)
+        val reminderAt = LocalDateTime.of(date.minusDays(days), LocalTime.of(hour, 0))
         val delay = Duration.between(LocalDateTime.now(), reminderAt).toMillis()
         if (delay <= 0) return
 
@@ -65,7 +67,7 @@ class HearingReminderWorker(context: Context, params: WorkerParameters) : Worker
 
         val notification = NotificationCompat.Builder(applicationContext, "hearing_reminders")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("Court hearing tomorrow")
+            .setContentTitle("Court hearing reminder")
             .setContentText("$title • $date • CNR $cnr")
             .setStyle(NotificationCompat.BigTextStyle().bigText("$title is listed for hearing on $date. CNR: $cnr"))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
