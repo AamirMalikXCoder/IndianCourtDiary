@@ -66,7 +66,7 @@ class MainActivity:ComponentActivity(){
   floatingActionButton={if(tab==0)FloatingActionButton({showAdd=true},containerColor=CourtGold,contentColor=CourtNavy){Icon(Icons.Outlined.Add,"Add")} }
  ){p->
   when(tab){
-   0->CasesList(cases,{selected=it},{vm.delete(it)},{vm.refresh(it)},refreshing,{vm.refreshAll()},Modifier.padding(p))
+   0->CasesList(cases,{selected=it},{vm.delete(it)},{vm.refresh(it)},{vm.togglePinned(it)},{vm.toggleArchived(it)},refreshing,{vm.refreshAll()},Modifier.padding(p))
    1->CalendarList(cases,{selected=it},Modifier.padding(p))
    else->SettingsScreen(vm,Modifier.padding(p))
   }
@@ -97,17 +97,32 @@ class MainActivity:ComponentActivity(){
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun CasesList(cases:List<CourtCase>,open:(CourtCase)->Unit,delete:(String)->Unit,refresh:(String)->Unit,refreshing:Boolean,refreshAll:()->Unit,modifier:Modifier){
+@Composable fun CasesList(cases:List<CourtCase>,open:(CourtCase)->Unit,delete:(String)->Unit,refresh:(String)->Unit,pin:(String)->Unit,archive:(String)->Unit,refreshing:Boolean,refreshAll:()->Unit,modifier:Modifier){
  var query by remember{mutableStateOf("")}
- val filtered=remember(cases,query){if(query.isBlank())cases else cases.filter{it.cnr.contains(query,true)||it.caseTitle.contains(query,true)||it.courtName.contains(query,true)||it.clientName.contains(query,true)}}
+ var filter by remember{mutableStateOf("Active")}
+ var sort by remember{mutableStateOf("Hearing")}
+ val organised=remember(cases,query,filter,sort){
+  cases.filter{c->
+   val search=query.isBlank()||c.cnr.contains(query,true)||c.caseTitle.contains(query,true)||c.courtName.contains(query,true)||c.clientName.contains(query,true)
+   val category=when(filter){"Pinned"->c.isPinned;"Archived"->c.isArchived;"Disposed"->c.stage.contains("disposed",true)||c.stage.contains("dismissed",true);else->!c.isArchived}
+   search&&category
+  }.sortedWith(compareByDescending<CourtCase>{it.isPinned}.thenComparator{one,two->
+   when(sort){
+    "Recent"->two.updatedAt.compareTo(one.updatedAt)
+    "A-Z"->one.caseTitle.compareTo(two.caseTitle,true)
+    else->(one.nextHearingDate?:"9999").compareTo(two.nextHearingDate?:"9999")
+   }
+  })
+ }
  PullToRefreshBox(isRefreshing=refreshing,onRefresh=refreshAll,modifier=modifier){
   Column{
-   SummaryDashboard(cases)
-   OutlinedTextField(query,{query=it},Modifier.fillMaxWidth().padding(16.dp),label={Text("Search cases")},leadingIcon={Icon(Icons.Outlined.Search,null)},singleLine=true)
-   if(filtered.isEmpty())Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Text(if(cases.isEmpty())"No cases added\nTap + and enter the CNR number." else "No matching cases")}
-   else LazyColumn(contentPadding=PaddingValues(horizontal=16.dp,vertical=4.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-    item{Text("My Cases",style=MaterialTheme.typography.headlineSmall)}
-    items(filtered,key={it.cnr}){item->CaseCard(item,open,delete,refresh)}
+   SummaryDashboard(cases.filter{!it.isArchived})
+   OutlinedTextField(query,{query=it},Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=8.dp),label={Text("Search cases")},leadingIcon={Icon(Icons.Outlined.Search,null)},singleLine=true)
+   Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)){listOf("Active","Pinned","Archived","Disposed").forEach{item->FilterChip(filter==item,{filter=item},label={Text(item)})}}
+   Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)){Text("Sort",Modifier.padding(top=12.dp),color=CourtMuted);listOf("Hearing","Recent","A-Z").forEach{item->FilterChip(sort==item,{sort=item},label={Text(item)})}}
+   if(organised.isEmpty())Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Text("No matching cases")}
+   else LazyColumn(contentPadding=PaddingValues(horizontal=16.dp,vertical=8.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+    items(organised,key={it.cnr}){item->CaseCard(item,open,delete,refresh,pin,archive)}
    }
   }
  }
@@ -128,21 +143,22 @@ fun hearingUrgency(raw:String?):HearingUrgency{
 @Composable fun StatusBadge(text:String,color:Color,container:Color){
  Surface(color=container,shape=MaterialTheme.shapes.small){Text(text,Modifier.padding(horizontal=10.dp,vertical=6.dp),style=MaterialTheme.typography.labelMedium,color=color)}
 }
-@Composable fun CaseCard(c:CourtCase,open:(CourtCase)->Unit,delete:((String)->Unit)?=null,refresh:((String)->Unit)?=null){
+@Composable fun CaseCard(c:CourtCase,open:(CourtCase)->Unit,delete:((String)->Unit)?=null,refresh:((String)->Unit)?=null,pin:((String)->Unit)?=null,archive:((String)->Unit)?=null){
  val urgency=hearingUrgency(c.nextHearingDate)
  ElevatedCard(Modifier.fillMaxWidth().clickable{open(c)},colors=CardDefaults.elevatedCardColors(containerColor=CourtSurfaceHigh)){
   Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){
    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.Top){
     Column(Modifier.weight(1f)){Text(c.caseTitle,style=MaterialTheme.typography.titleMedium);Text(c.cnr,color=CourtGold,style=MaterialTheme.typography.labelMedium)}
+    if(c.isPinned)Icon(Icons.Outlined.Star,null,tint=CourtGold,modifier=Modifier.padding(end=8.dp))
     StatusBadge(urgency.label,urgency.color,urgency.container)
    }
    Text(c.courtName,color=CourtMuted)
-   Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
-    StatusBadge(c.stage.ifBlank{"Status pending"},CourtText,CourtSurface)
-   }
+   Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){StatusBadge(c.stage.ifBlank{"Status pending"},CourtText,CourtSurface);if(c.isArchived)StatusBadge("Archived",CourtGold,Color(0xFF3A2D12))}
    Text(c.nextHearingDate?.let{"Next hearing • $it"}?:"Hearing date unavailable",style=MaterialTheme.typography.bodyMedium)
    Text("Updated "+formatUpdated(c.updatedAt),style=MaterialTheme.typography.labelSmall,color=CourtMuted)
-   if(delete!=null||refresh!=null)Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End){
+   if(delete!=null||refresh!=null||pin!=null||archive!=null)Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End){
+    if(pin!=null)IconButton({pin(c.cnr)}){Icon(if(c.isPinned)Icons.Outlined.Star else Icons.Outlined.StarBorder,"Pin",tint=if(c.isPinned)CourtGold else CourtMuted)}
+    if(archive!=null)IconButton({archive(c.cnr)}){Icon(if(c.isArchived)Icons.Outlined.Unarchive else Icons.Outlined.Archive,"Archive",tint=CourtMuted)}
     if(refresh!=null)IconButton({refresh(c.cnr)}){Icon(Icons.Outlined.Refresh,"Refresh",tint=CourtGold)}
     if(delete!=null)IconButton({delete(c.cnr)}){Icon(Icons.Outlined.Delete,"Delete",tint=MaterialTheme.colorScheme.error)}
    }
