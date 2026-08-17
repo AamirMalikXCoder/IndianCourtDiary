@@ -121,7 +121,8 @@ fun androidx.compose.foundation.lazy.LazyListScope.hearingSection(title:String,l
  else items(list,key={title+it.cnr}){CaseCard(it,open)}
 }
 
-@OptIn(ExperimentalMaterial3Api::class)\n@Composable fun SettingsScreen(vm:CourtDiaryViewModel,modifier:Modifier){
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable fun SettingsScreen(vm:CourtDiaryViewModel,modifier:Modifier){
  val context=LocalContext.current
  var days by remember{mutableIntStateOf(AppPreferences.reminderDays(context))}
  var hour by remember{mutableIntStateOf(AppPreferences.reminderHour(context))}
